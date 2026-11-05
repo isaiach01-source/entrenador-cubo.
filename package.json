@@ -1,0 +1,19 @@
+{
+  "name": "rubik-trainer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@houstonp/rubiks-cube": "^3.1.0",
+    "rubiks-cross-trainer": "^1.0.6"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-pwa": "^0.17.0"
+  }
+}
