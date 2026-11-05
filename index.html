@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Entrenador de Cubo Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-panel: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --accent-green: #10b981; --accent-red: #ef4444; --accent-blue: #3b82f6; --accent-yellow: #fbbf24;
+            --btn-bg: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: var(--text-main); height: 100vh; height: 100dvh; overflow: hidden; }
+        .app-container { display: flex; height: calc(100vh - 60px); width: 100vw; transition: all 0.3s ease; }
+        .cube-area { flex: 1; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); }
+        rubiks-cube { width: 100%; height: 100%; max-width: 600px; max-height: 600px; touch-action: none; }
+        .cube-area.hidden { display: none !important; }
+        .panel-area { width: 420px; background-color: var(--bg-panel); padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; height: 100%; overflow-y: auto; }
+        .app-container.physical-active .panel-area { width: 100%; max-width: 600px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); }
+        .tabs { display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.4rem; border-radius: 8px; }
+        .tab-btn { flex: 1; padding: 0.6rem; border: none; border-radius: 6px; background: transparent; color: var(--text-muted); font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .tab-btn.active { background: var(--accent-blue); color: white; }
+        .timer-container { position: relative; text-align: center; background-color: rgba(0,0,0,0.3); padding: 1.5rem 1rem; border-radius: 12px; border: 2px solid transparent; cursor: pointer; user-select: none; }
+        .timer-container.ready { border-color: var(--accent-green); }
+        .timer-container.solving { border-color: var(--accent-blue); }
+        #timer { font-family: 'Share Tech Mono', monospace; font-size: 4.5rem; font-weight: 800; color: var(--accent-yellow); line-height: 1; pointer-events: none; }
+        #status { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; pointer-events: none; }
+        .penalty-menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 23, 42, 0.95); border-radius: 50px; padding: 0.5rem; display: none; gap: 0.5rem; z-index: 10; }
+        .penalty-menu.show { display: flex; }
+        .penalty-btn { border: none; border-radius: 50%; width: 50px; height: 50px; font-weight: 800; cursor: pointer; color: white; }
+        .penalty-btn.dnf { background: var(--accent-red); } .penalty-btn.plus2 { background: #f59e0b; color: #000; } .penalty-btn.ok { background: var(--accent-green); }
+        .main-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .btn { padding: 0.8rem; border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; color: white; }
+        .btn.primary { background: var(--accent-blue); grid-column: span 2; } .btn.secondary { background: var(--accent-green); } .btn.secondary:disabled { background: #334155; color: #64748b; }
+        .btn.outline { background: transparent; border: 1px solid var(--text-muted); grid-column: span 2; }
+        .speed-control { background: rgba(0,0,0,0.15); padding: 0.8rem; border-radius: 8px; }
+        .speed-control label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem; }
+        input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--accent-blue); cursor: pointer; margin-top: -5px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #475569; border-radius: 2px; }
+        .manual-controls h3 { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 0.5rem; }
+        .move-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.4rem; }
+        .move-btn { background-color: var(--btn-bg); color: white; border: none; border-radius: 6px; padding: 0.8rem 0; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        .move-btn.prime { background-color: rgba(51, 65, 85, 0.5); color: var(--text-muted); }
+        .history-section { background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; flex: 1; min-height: 200px; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .history-header h3 { font-size: 0.9rem; color: var(--text-muted); }
+        .btn-small { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; }
+        .btn-small.danger-text { color: var(--accent-red); border-color: var(--accent-red); }
+        .stats { display: flex; gap: 1rem; font-size: 0.85rem; margin-bottom: 0.5rem; color: #38bdf8; }
+        .history-list { list-style: none; overflow-y: auto; font-size: 0.85rem; color: var(--text-muted); flex: 1; }
+        .history-list li { padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .delete-btn { background: transparent; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
+        .bottom-nav { height: 60px; background: var(--bg-panel); display: flex; border-top: 1px solid rgba(255,255,255,0.1); position: fixed; bottom: 0; width: 100%; z-index: 100; }
+        .nav-item { flex: 1; background: transparent; border: none; color: var(--text-muted); font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 0.8rem; }
+        .nav-item.active { color: var(--accent-yellow); }
+        .nav-item .icon { font-size: 1.2rem; }
+        .page-container { height: calc(100vh - 60px); overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .page-header { text-align: center; margin-bottom: 1rem; }
+        .algo-tabs { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
+        .algo-tab { background: var(--btn-bg); color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 20px; font-weight: bold; }
+        .algo-tab.active { background: var(--accent-yellow); color: black; }
+        .algo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .algo-card { background: var(--bg-panel); border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .algo-img-placeholder { width: 100%; height: 100px; background: #000; border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: center; align-items: center; color: var(--text-muted); font-size: 0.8rem;}
+        .detail-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .back-btn { background: transparent; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+        .detail-cube-area { height: 300px; width: 100%; position: relative; background: rgba(0,0,0,0.2); border-radius: 12px; overflow: hidden;}
+        #learn-cube { width: 100%; height: 100%; }
+        .algo-info { background: var(--bg-panel); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 1rem;}
+        .algo-string { font-family: 'Share Tech Mono', monospace; font-size: 1.2rem; color: var(--accent-yellow); text-align: center; background: #000; padding: 1rem; border-radius: 8px;}
+        .playback-controls { display: flex; gap: 0.5rem; justify-content: center; }
+        .status-buttons { display: flex; gap: 0.5rem; }
+        .btn-status { flex: 1; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--text-muted); background: transparent; color: var(--text-muted); font-weight: 600;}
+        .btn-status.active[data-status="learned"] { background: var(--accent-green); border-color: var(--accent-green); color: white; }
+        .btn-status.active[data-status="learning"] { background: #f59e0b; border-color: #f59e0b; color: white; }
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .cube-area { flex: 1; padding: 0.5rem; }
+            .panel-area { width: 100%; height: auto; max-height: 65dvh; border-top: 1px solid rgba(255,255,255,0.1); padding: 1rem; gap: 0.8rem; }
+            #timer { font-size: 3.5rem; }
+            .app-container.physical-active .panel-area { height: 100dvh; max-height: 100dvh; border: none; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" id="main-app">
+        <main class="cube-area" id="cube-area">
+            <rubiks-cube id="cube" cube-type="Three" animation-speed-ms="300"></rubiks-cube>
+        </main>
+        <aside class="panel-area" id="panel-area">
+            <div class="tabs">
+                <button id="tab-virtual" class="tab-btn active">Simulador 3D</button>
+                <button id="tab-physical" class="tab-btn">Cubo Físico</button>
+            </div>
+            <div class="timer-container" id="timer-container">
+                <div id="timer">15.0s</div>
+                <div id="status">Toca para inspeccionar</div>
+                <div id="move-counter" style="font-size: 0.9rem; color: #38bdf8; margin-top: 0.5rem; display: none;">Movimientos: <span id="move-count">0</span></div>
+                <div id="penalty-menu" class="penalty-menu">
+                    <button class="penalty-btn dnf" data-penalty="DNF">DNF</button>
+                    <button class="penalty-btn plus2" data-penalty="+2">+2</button>
+                    <button class="penalty-btn ok" data-penalty="OK">OK</button>
+                </div>
+            </div>
+            <div class="main-controls">
+                <button id="new-scramble" class="btn primary">Nuevo Scramble</button>
+                <button id="repeat-scramble" class="btn secondary" disabled>Repetir</button>
+                <button id="start-inspection" class="btn outline">Inspección (15s)</button>
+            </div>
+            <div class="speed-control">
+                <label for="speed-slider">Velocidad de mezcla: <span id="speed-value">0.3s</span></label>
+                <input type="range" id="speed-slider" min="100" max="2000" step="100" value="300">
+            </div>
+            <div id="virtual-controls">
+                <div class="manual-controls">
+                    <h3>Controles Táctiles</h3>
+                    <div class="move-grid">
+                        <button class="move-btn" data-move="U">U</button><button class="move-btn" data-move="D">D</button><button class="move-btn" data-move="L">L</button><button class="move-btn" data-move="R">R</button><button class="move-btn" data-move="F">F</button><button class="move-btn" data-move="B">B</button>
+                        <button class="move-btn prime" data-move="U'">U'</button><button class="move-btn prime" data-move="D'">D'</button><button class="move-btn prime" data-move="L'">L'</button><button class="move-btn prime" data-move="R'">R'</button><button class="move-btn prime" data-move="F'">F'</button><button class="move-btn prime" data-move="B'">B'</button>
+                    </div>
+                </div>
+            </div>
+            <div class="history-section">
+                <div class="history-header">
+                    <h3>Historial</h3>
+                    <div style="display: flex; gap: 5px;">
+                        <button id="clear-history" class="btn-small danger-text">Borrar Todo</button>
+                        <button id="export-csv" class="btn-small">CSV</button>
+                    </div>
+                </div>
+                <div class="stats">
+                    <span>Ao5: <b id="ao5">-</b></span><span>Ao12: <b id="ao12">-</b></span>
+                </div>
+                <ul id="history-list" class="history-list"></ul>
+            </div>
+        </aside>
+    </div>
+    <div class="page-container" id="learn-page" style="display: none;">
+        <header class="page-header"><h2>Biblioteca de Algoritmos</h2></header>
+        <div class="algo-grid" id="algo-grid"></div>
+    </div>
+    <div class="page-container" id="detail-page" style="display: none;">
+        <header class="detail-header">
+            <button id="back-to-learn" class="back-btn">←</button>
+            <h2 id="detail-title">OLL 1 Punto</h2>
+        </header>
+        <div class="detail-cube-area"><rubiks-cube id="learn-cube" cube-type="Three" animation-speed-ms="300"></rubiks-cube></div>
+        <div class="algo-info">
+            <h3>Algoritmo</h3>
+            <div class="algo-string" id="algo-string">R U2 R2 F R F' U2 R' F R F'</div>
+            <div class="playback-controls">
+                <button id="btn-play" class="btn primary">▶ Reproducir</button>
+                <button id="btn-reset-algo" class="btn outline">↺ Reiniciar</button>
+            </div>
+            <h3>Estado de aprendizaje</h3>
+            <div class="status-buttons">
+                <button class="btn-status" data-status="unstarted">Sin empezar</button>
+                <button class="btn-status" data-status="learning">Aprendiendo</button>
+                <button class="btn-status active" data-status="learned">Aprendido</button>
+            </div>
+        </div>
+    </div>
+    <nav class="bottom-nav">
+        <button id="nav-home" class="nav-item active"><span class="icon">⏱️</span> Timer</button>
+        <button id="nav-learn" class="nav-item"><span class="icon">🎓</span> Aprender</button>
+    </nav>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
